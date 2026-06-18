@@ -22,7 +22,9 @@ services:
     environment:
       - DB_PATH=/data/orders.db
       - AWS_REGION=ap-south-1
-      # SNS_TOPIC_ARN set later once Terraform creates it
+      - SNS_TOPIC_ARN=arn:aws:sns:ap-south-1:346866990256:rohan-orders-order-events
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
     volumes:
       - order_data:/data
 
@@ -34,7 +36,9 @@ services:
     environment:
       - DB_PATH=/data/inventory.db
       - AWS_REGION=ap-south-1
-      # SQS_QUEUE_URL set later once Terraform creates it
+      - SQS_QUEUE_URL=https://sqs.ap-south-1.amazonaws.com/346866990256/rohan-orders-inventory-queue
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
     volumes:
       - inventory_data:/data
 
@@ -46,7 +50,9 @@ services:
     environment:
       - AWS_REGION=ap-south-1
       - SENDER_EMAIL=noreply@example.com
-      # SQS_QUEUE_URL set later once Terraform creates it
+      - SQS_QUEUE_URL=https://sqs.ap-south-1.amazonaws.com/346866990256/rohan-orders-notification-queue
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
 
   prometheus:
     image: prom/prometheus:latest

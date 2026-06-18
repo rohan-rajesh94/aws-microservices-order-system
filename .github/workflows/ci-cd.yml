@@ -1,0 +1,96 @@
+name: Microservices CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+
+env:
+  AWS_REGION: ap-south-1
+  ECR_REGISTRY: 346866990256.dkr.ecr.ap-south-1.amazonaws.com
+
+jobs:
+
+  test:
+    name: Test all services
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [api-gateway, order-service, inventory-service, notification-service]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install -r services/${{ matrix.service }}/requirements.txt
+
+      - name: Run tests (if any exist)
+        run: |
+          cd services/${{ matrix.service }}
+          if [ -d "tests" ] && [ "$(ls -A tests)" ]; then
+            pip install pytest
+            pytest tests/ -v
+          else
+            echo "No tests found for ${{ matrix.service }}, skipping"
+          fi
+
+  build-and-push:
+    name: Build and push images
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [api-gateway, order-service, inventory-service, notification-service]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push image
+        run: |
+          IMAGE=${{ env.ECR_REGISTRY }}/rohan-orders-${{ matrix.service }}:${{ github.sha }}
+          docker build -t $IMAGE ./services/${{ matrix.service }}
+          docker push $IMAGE
+          echo "Pushed: $IMAGE"
+
+  terraform-validate:
+    name: Validate Terraform
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: |
+          cd infra
+          terraform init
+
+      - name: Terraform Validate
+        run: |
+          cd infra
+          terraform validate
+
+      - name: Terraform Plan
+        run: |
+          cd infra
+          terraform plan
