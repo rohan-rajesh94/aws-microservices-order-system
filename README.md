@@ -2,8 +2,7 @@
 
 An event-driven order processing platform — 4 independent Flask microservices that communicate through AWS SNS/SQS instead of calling each other directly.
 
-## Why build it this way
-Most beginner projects are one app talking to one database. This one isn't. If Notification service goes down, orders still get created and stock still updates — that's the whole point of loose coupling. Order service publishes an event and moves on; it never waits for Inventory or Notification to respond.
+
 
 ##  Architecture
 
@@ -14,6 +13,7 @@ Most beginner projects are one app talking to one database. This one isn't. If N
 - **IaC:** Terraform — VPC, messaging, IAM, zero hourly cost
 - **CI/CD:** GitHub Actions, matrix strategy for parallel builds
 - **Monitoring:** Prometheus + Grafana, one dashboard for all 4 services
+
 Client → API Gateway → Order Service → publishes to SNS
 
 ↓ fans out to
